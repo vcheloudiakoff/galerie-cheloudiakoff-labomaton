@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://galerie-cheloudiakoff.com/sitemap.xml
+
+# Admin section
+Disallow: /admin/
