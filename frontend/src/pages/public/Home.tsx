@@ -35,11 +35,15 @@ export function Home() {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative bg-muted/30 py-24 md:py-32">
+      <section className="relative bg-muted/30 pt-12 pb-24 md:pb-32 md:pt-12">
         <div className="container">
           <div className="max-w-3xl">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              Galerie Cheloudiakoff
+            <h1 className="mb-8">
+              <img
+                src="/logo.png"
+                alt="Galerie Cheloudiakoff"
+                className="h-24 md:h-32 lg:h-40 w-auto"
+              />
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8">
               Un espace dedie a l'art contemporain, ou se rencontrent artistes
