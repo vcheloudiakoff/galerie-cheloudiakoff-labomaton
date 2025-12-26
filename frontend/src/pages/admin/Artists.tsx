@@ -113,30 +113,40 @@ export function AdminArtists() {
             {artists.map((artist) => (
               <div
                 key={artist.id}
-                className="flex items-center gap-4 p-4 border rounded-lg"
+                className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                  {artist.portrait ? (
-                    <img
-                      src={artist.portrait.url}
-                      alt={artist.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      {artist.name[0]}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{artist.name}</h3>
-                  <p className="text-sm text-muted-foreground">/{artist.slug}</p>
+                <div
+                  className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+                  onClick={() => window.open(`/artistes/${artist.slug}`, '_blank')}
+                >
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                    {artist.portrait ? (
+                      <img
+                        src={artist.portrait.url}
+                        alt={artist.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        {artist.name[0]}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{artist.name}</h3>
+                    <p className="text-sm text-muted-foreground">/{artist.slug}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleTogglePublish(artist)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleTogglePublish(artist)
+                    }}
                   >
                     {artist.published ? (
                       <Eye className="h-4 w-4 text-green-500" />
@@ -145,16 +155,26 @@ export function AdminArtists() {
                     )}
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => setEditing(artist)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setEditing(artist)
+                    }}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(artist.id)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleDelete(artist.id)
+                    }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

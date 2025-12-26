@@ -206,7 +206,7 @@ pub async fn list_artists(
         sqlx::query_as::<_, Artist>(
             r#"
             SELECT * FROM artists
-            WHERE name ILIKE $1
+            WHERE name ILIKE $1 OR slug ILIKE $1 OR bio_md ILIKE $1
             ORDER BY updated_at DESC
             LIMIT $2 OFFSET $3
             "#,
@@ -419,9 +419,13 @@ pub async fn list_artworks(
         let search_pattern = format!("%{}%", search);
         sqlx::query_as::<_, Artwork>(
             r#"
-            SELECT * FROM artworks
-            WHERE title ILIKE $1
-            ORDER BY updated_at DESC
+            SELECT aw.* FROM artworks aw
+            LEFT JOIN artists ar ON aw.artist_id = ar.id
+            WHERE aw.title ILIKE $1
+                OR aw.medium ILIKE $1
+                OR aw.dimensions ILIKE $1
+                OR ar.name ILIKE $1
+            ORDER BY aw.updated_at DESC
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -662,6 +666,8 @@ pub async fn list_events(
             r#"
             SELECT * FROM events
             WHERE title ILIKE $1
+                OR location ILIKE $1
+                OR description_md ILIKE $1
             ORDER BY start_at DESC
             LIMIT $2 OFFSET $3
             "#,
@@ -921,7 +927,7 @@ pub async fn list_posts(
         sqlx::query_as::<_, Post>(
             r#"
             SELECT * FROM posts
-            WHERE title ILIKE $1
+            WHERE title ILIKE $1 OR body_md ILIKE $1
             ORDER BY updated_at DESC
             LIMIT $2 OFFSET $3
             "#,

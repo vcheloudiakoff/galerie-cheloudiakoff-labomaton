@@ -102,9 +102,12 @@ export function AdminPosts() {
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="flex items-center gap-4 p-4 border rounded-lg"
+                className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="flex-1 min-w-0">
+                <div
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => window.open(`/actualites/${post.slug}`, '_blank')}
+                >
                   <h3 className="font-semibold truncate">{post.title}</h3>
                   <p className="text-sm text-muted-foreground">
                     {formatDate(post.published_at || post.created_at)}

@@ -108,26 +108,31 @@ export function AdminArtworks() {
             {artworks.map((artwork) => (
               <div
                 key={artwork.id}
-                className="flex items-center gap-4 p-4 border rounded-lg"
+                className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="w-16 h-16 rounded overflow-hidden bg-muted flex-shrink-0">
-                  {artwork.media[0] ? (
-                    <img
-                      src={artwork.media[0].url}
-                      alt={artwork.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                      No img
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{artwork.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {artwork.artist_name} {artwork.year && `(${artwork.year})`}
-                  </p>
+                <div
+                  className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+                  onClick={() => window.open(`/artistes/${artwork.artist_slug}`, '_blank')}
+                >
+                  <div className="w-16 h-16 rounded overflow-hidden bg-muted flex-shrink-0">
+                    {artwork.media?.[0] ? (
+                      <img
+                        src={artwork.media[0].url}
+                        alt={artwork.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                        No img
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{artwork.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {artwork.artist_name} {artwork.year && `(${artwork.year})`}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {artwork.published ? (

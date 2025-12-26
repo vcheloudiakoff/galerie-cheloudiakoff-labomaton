@@ -103,9 +103,12 @@ export function AdminEvents() {
             {events.map((event) => (
               <div
                 key={event.id}
-                className="flex items-center gap-4 p-4 border rounded-lg"
+                className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="flex-1 min-w-0">
+                <div
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => window.open(`/evenements/${event.slug}`, '_blank')}
+                >
                   <h3 className="font-semibold truncate">{event.title}</h3>
                   <p className="text-sm text-muted-foreground">
                     {formatDateRange(event.start_at, event.end_at)}
