@@ -5,9 +5,10 @@ import { adminApi } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { PageWithHero } from '@/types'
+import { MediaPicker } from '@/components/admin/MediaPicker'
+import { MarkdownEditor } from '@/components/admin/MarkdownEditor'
+import type { PageWithHero, Media } from '@/types'
 
 export function AdminPages() {
   const [pages, setPages] = useState<PageWithHero[]>([])
@@ -93,18 +94,26 @@ function PageForm({
   onCancel,
 }: {
   page: PageWithHero
-  onSave: (data: Partial<PageWithHero>) => void
+  onSave: (data: Partial<PageWithHero> & { hero_media_id?: string | null }) => void
   onCancel: () => void
 }) {
   const [title, setTitle] = useState(page.title)
   const [body, setBody] = useState(page.body_md || '')
+  const [heroId, setHeroId] = useState<string | null>(page.hero_media_id || null)
+  const [hero, setHero] = useState<Media | null>(page.hero || null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave({
       title,
       body_md: body || undefined,
+      hero_media_id: heroId,
     })
+  }
+
+  const handleHeroChange = (mediaId: string | null, media: Media | null) => {
+    setHeroId(mediaId)
+    setHero(media)
   }
 
   return (
@@ -114,23 +123,29 @@ function PageForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Titre</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
+          <div className="grid md:grid-cols-[200px_1fr] gap-6">
+            <MediaPicker
+              value={heroId}
+              onChange={handleHeroChange}
+              label="Image hero"
+              preview={hero}
             />
+            <div className="space-y-2">
+              <Label>Titre</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Contenu (Markdown)</Label>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={10}
-            />
-          </div>
+          <MarkdownEditor
+            value={body}
+            onChange={setBody}
+            rows={10}
+            label="Contenu"
+          />
 
           <div className="flex gap-2">
             <Button type="submit">Enregistrer</Button>

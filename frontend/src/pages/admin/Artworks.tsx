@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { ArtworkWithMedia, ArtistWithPortrait } from '@/types'
+import { MultiMediaPicker } from '@/components/admin/MediaPicker'
+import type { ArtworkWithMedia, ArtistWithPortrait, Media } from '@/types'
 
 export function AdminArtworks() {
   const [artworks, setArtworks] = useState<ArtworkWithMedia[]>([])
@@ -177,6 +178,8 @@ function ArtworkForm({
   const [priceNote, setPriceNote] = useState(artwork?.price_note || '')
   const [artsperUrl, setArtsperUrl] = useState(artwork?.artsper_url || '')
   const [published, setPublished] = useState(artwork?.published || false)
+  const [mediaIds, setMediaIds] = useState<string[]>(artwork?.media?.map((m) => m.id) || [])
+  const [mediaPreviews, setMediaPreviews] = useState<Media[]>(artwork?.media || [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -189,7 +192,13 @@ function ArtworkForm({
       price_note: priceNote || undefined,
       artsper_url: artsperUrl || undefined,
       published,
+      media_ids: mediaIds,
     })
+  }
+
+  const handleMediaChange = (ids: string[], mediaList: Media[]) => {
+    setMediaIds(ids)
+    setMediaPreviews(mediaList)
   }
 
   return (
@@ -199,6 +208,13 @@ function ArtworkForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <MultiMediaPicker
+            value={mediaIds}
+            onChange={handleMediaChange}
+            label="Images de l'oeuvre"
+            previews={mediaPreviews}
+          />
+
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Artiste *</Label>

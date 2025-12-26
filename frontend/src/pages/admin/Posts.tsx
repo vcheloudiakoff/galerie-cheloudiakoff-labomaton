@@ -5,11 +5,12 @@ import { adminApi } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MediaPicker } from '@/components/admin/MediaPicker'
+import { MarkdownEditor } from '@/components/admin/MarkdownEditor'
 import { formatDate } from '@/lib/utils'
-import type { PostWithHero } from '@/types'
+import type { PostWithHero, Media } from '@/types'
 
 export function AdminPosts() {
   const [posts, setPosts] = useState<PostWithHero[]>([])
@@ -145,12 +146,14 @@ function PostForm({
   onCancel,
 }: {
   post: PostWithHero | null
-  onSave: (data: Partial<PostWithHero>) => void
+  onSave: (data: Partial<PostWithHero> & { hero_media_id?: string | null }) => void
   onCancel: () => void
 }) {
   const [title, setTitle] = useState(post?.title || '')
   const [body, setBody] = useState(post?.body_md || '')
   const [published, setPublished] = useState(post?.published || false)
+  const [heroId, setHeroId] = useState<string | null>(post?.hero_media_id || null)
+  const [hero, setHero] = useState<Media | null>(post?.hero || null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -158,7 +161,13 @@ function PostForm({
       title,
       body_md: body || undefined,
       published,
+      hero_media_id: heroId,
     })
+  }
+
+  const handleHeroChange = (mediaId: string | null, media: Media | null) => {
+    setHeroId(mediaId)
+    setHero(media)
   }
 
   return (
@@ -168,23 +177,29 @@ function PostForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Titre *</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
+          <div className="grid md:grid-cols-[200px_1fr] gap-6">
+            <MediaPicker
+              value={heroId}
+              onChange={handleHeroChange}
+              label="Image hero"
+              preview={hero}
             />
+            <div className="space-y-2">
+              <Label>Titre *</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Contenu (Markdown)</Label>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={10}
-            />
-          </div>
+          <MarkdownEditor
+            value={body}
+            onChange={setBody}
+            rows={10}
+            label="Contenu"
+          />
 
           <div className="flex items-center gap-2">
             <Switch

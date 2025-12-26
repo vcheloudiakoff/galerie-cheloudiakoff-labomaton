@@ -5,11 +5,13 @@ import { adminApi } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MediaPicker } from '@/components/admin/MediaPicker'
+import { ArtistPicker } from '@/components/admin/ArtistPicker'
+import { MarkdownEditor } from '@/components/admin/MarkdownEditor'
 import { formatDateRange } from '@/lib/utils'
-import type { EventWithDetails } from '@/types'
+import type { EventWithDetails, Media, ArtistWithPortrait } from '@/types'
 
 export function AdminEvents() {
   const [events, setEvents] = useState<EventWithDetails[]>([])
@@ -145,7 +147,7 @@ function EventForm({
   onCancel,
 }: {
   event: EventWithDetails | null
-  onSave: (data: Partial<EventWithDetails> & { artist_ids?: string[] }) => void
+  onSave: (data: Partial<EventWithDetails> & { artist_ids?: string[]; hero_media_id?: string | null }) => void
   onCancel: () => void
 }) {
   const [title, setTitle] = useState(event?.title || '')
@@ -154,6 +156,10 @@ function EventForm({
   const [location, setLocation] = useState(event?.location || '')
   const [description, setDescription] = useState(event?.description_md || '')
   const [published, setPublished] = useState(event?.published || false)
+  const [heroId, setHeroId] = useState<string | null>(event?.hero_media_id || null)
+  const [hero, setHero] = useState<Media | null>(event?.hero || null)
+  const [artistIds, setArtistIds] = useState<string[]>(event?.artists?.map((a) => a.id) || [])
+  const [artistPreviews, setArtistPreviews] = useState<ArtistWithPortrait[]>(event?.artists || [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,7 +170,19 @@ function EventForm({
       location: location || undefined,
       description_md: description || undefined,
       published,
+      hero_media_id: heroId,
+      artist_ids: artistIds,
     })
+  }
+
+  const handleHeroChange = (mediaId: string | null, media: Media | null) => {
+    setHeroId(mediaId)
+    setHero(media)
+  }
+
+  const handleArtistsChange = (ids: string[], artists: ArtistWithPortrait[]) => {
+    setArtistIds(ids)
+    setArtistPreviews(artists)
   }
 
   return (
@@ -174,52 +192,67 @@ function EventForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Titre *</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
+          <div className="grid md:grid-cols-[200px_1fr] gap-6">
+            <MediaPicker
+              value={heroId}
+              onChange={handleHeroChange}
+              label="Image hero"
+              preview={hero}
             />
-          </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Titre *</Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Date de debut *</Label>
-              <Input
-                type="datetime-local"
-                value={startAt}
-                onChange={(e) => setStartAt(e.target.value)}
-                required
-              />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date de debut *</Label>
+                  <Input
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date de fin</Label>
+                  <Input
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={(e) => setEndAt(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Lieu</Label>
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Galerie Cheloudiakoff, Paris"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Date de fin</Label>
-              <Input
-                type="datetime-local"
-                value={endAt}
-                onChange={(e) => setEndAt(e.target.value)}
-              />
-            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Lieu</Label>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Galerie Cheloudiakoff, Paris"
-            />
-          </div>
+          <ArtistPicker
+            value={artistIds}
+            onChange={handleArtistsChange}
+            label="Artistes de l'evenement"
+            previews={artistPreviews}
+          />
 
-          <div className="space-y-2">
-            <Label>Description (Markdown)</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={6}
-            />
-          </div>
+          <MarkdownEditor
+            value={description}
+            onChange={setDescription}
+            rows={6}
+            label="Description"
+          />
 
           <div className="flex items-center gap-2">
             <Switch

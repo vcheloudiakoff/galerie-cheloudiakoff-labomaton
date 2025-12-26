@@ -27,8 +27,11 @@ async function request<T>(
 ): Promise<T> {
   const token = localStorage.getItem('token')
 
-  const headers: HeadersInit = {
-    ...options.headers,
+  const headers: Record<string, string> = {}
+
+  if (options.headers) {
+    const existingHeaders = options.headers as Record<string, string>
+    Object.assign(headers, existingHeaders)
   }
 
   if (token) {

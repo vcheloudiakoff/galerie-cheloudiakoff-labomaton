@@ -5,10 +5,11 @@ import { adminApi } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { ArtistWithPortrait } from '@/types'
+import { MediaPicker } from '@/components/admin/MediaPicker'
+import { MarkdownEditor } from '@/components/admin/MarkdownEditor'
+import type { ArtistWithPortrait, Media } from '@/types'
 
 export function AdminArtists() {
   const [artists, setArtists] = useState<ArtistWithPortrait[]>([])
@@ -173,7 +174,7 @@ function ArtistForm({
   onCancel,
 }: {
   artist: ArtistWithPortrait | null
-  onSave: (data: Partial<ArtistWithPortrait>) => void
+  onSave: (data: Partial<ArtistWithPortrait> & { portrait_media_id?: string | null }) => void
   onCancel: () => void
 }) {
   const [name, setName] = useState(artist?.name || '')
@@ -182,6 +183,8 @@ function ArtistForm({
   const [websiteUrl, setWebsiteUrl] = useState(artist?.website_url || '')
   const [instagramUrl, setInstagramUrl] = useState(artist?.instagram_url || '')
   const [published, setPublished] = useState(artist?.published || false)
+  const [portraitId, setPortraitId] = useState<string | null>(artist?.portrait_media_id || null)
+  const [portrait, setPortrait] = useState<Media | null>(artist?.portrait || null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -192,7 +195,13 @@ function ArtistForm({
       website_url: websiteUrl || undefined,
       instagram_url: instagramUrl || undefined,
       published,
+      portrait_media_id: portraitId,
     })
+  }
+
+  const handlePortraitChange = (mediaId: string | null, media: Media | null) => {
+    setPortraitId(mediaId)
+    setPortrait(media)
   }
 
   return (
@@ -202,22 +211,30 @@ function ArtistForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nom *</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+          <div className="grid md:grid-cols-[200px_1fr] gap-6">
+            <MediaPicker
+              value={portraitId}
+              onChange={handlePortraitChange}
+              label="Portrait"
+              preview={portrait}
             />
-          </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nom *</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label>Biographie (Markdown)</Label>
-            <Textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={4}
-            />
+              <MarkdownEditor
+                value={bio}
+                onChange={setBio}
+                rows={4}
+                label="Biographie"
+              />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">
