@@ -56,6 +56,29 @@ export interface ArtworkWithMedia extends Artwork {
   artist_slug: string | null
 }
 
+export interface Edition {
+  id: string
+  artist_id: string
+  title: string
+  slug: string
+  year: number | null
+  medium: string | null
+  dimensions: string | null
+  edition_size: string | null
+  price_note: string | null
+  artsper_url: string | null
+  published: boolean
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface EditionWithMedia extends Edition {
+  media: Media[]
+  artist_name: string | null
+  artist_slug: string | null
+}
+
 export interface Event {
   id: string
   title: string
@@ -129,6 +152,7 @@ export interface HomeData {
 
 export interface ArtistDetailResponse extends ArtistWithPortrait {
   artworks: ArtworkWithMedia[]
+  editions: EditionWithMedia[]
 }
 
 export interface LoginResponse {

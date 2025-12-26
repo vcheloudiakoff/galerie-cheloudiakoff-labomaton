@@ -27,6 +27,7 @@ fn public_routes() -> Router<AppState> {
         .route("/home", get(handlers::public::get_home))
         .route("/artists", get(handlers::public::list_artists))
         .route("/artists/:slug", get(handlers::public::get_artist))
+        .route("/editions", get(handlers::public::list_editions))
         .route("/events", get(handlers::public::list_events))
         .route("/events/:slug", get(handlers::public::get_event))
         .route("/posts", get(handlers::public::list_posts))
@@ -71,6 +72,16 @@ fn admin_routes() -> Router<AppState> {
         .route("/posts/:id", get(handlers::admin::get_post))
         .route("/posts/:id", put(handlers::admin::update_post))
         .route("/posts/:id", delete(handlers::admin::delete_post))
+        // Editions
+        .route("/editions", get(handlers::admin::list_editions))
+        .route("/editions", post(handlers::admin::create_edition))
+        .route("/editions/:id", get(handlers::admin::get_edition))
+        .route("/editions/:id", put(handlers::admin::update_edition))
+        .route("/editions/:id", delete(handlers::admin::delete_edition))
+        .route(
+            "/editions/:id/publish",
+            post(handlers::admin::toggle_edition_publish),
+        )
         // Pages
         .route("/pages", get(handlers::admin::list_pages))
         .route("/pages/:key", get(handlers::admin::get_page))

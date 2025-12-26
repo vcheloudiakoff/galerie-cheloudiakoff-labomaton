@@ -10,6 +10,7 @@ import type {
   WaitlistEntry,
   LoginResponse,
   ArtworkWithMedia,
+  EditionWithMedia,
 } from '@/types'
 
 const API_BASE = '/api'
@@ -79,6 +80,9 @@ export const publicApi = {
 
   getArtist: (slug: string) =>
     request<ArtistDetailResponse>(`/public/artists/${slug}`),
+
+  getEditions: (page = 1, perPage = 100) =>
+    request<EditionWithMedia[]>(`/public/editions?page=${page}&per_page=${perPage}`),
 
   getEvents: (page = 1, perPage = 20) =>
     request<EventWithDetails[]>(`/public/events?page=${page}&per_page=${perPage}`),
@@ -186,6 +190,34 @@ export const adminApi = {
 
   deleteArtwork: (id: string) =>
     request<{ success: boolean }>(`/admin/artworks/${id}`, { method: 'DELETE' }),
+
+  // Editions
+  listEditions: (search?: string, page = 1, perPage = 20) => {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
+    if (search) params.set('q', search)
+    return request<EditionWithMedia[]>(`/admin/editions?${params}`)
+  },
+
+  getEdition: (id: string) =>
+    request<EditionWithMedia>(`/admin/editions/${id}`),
+
+  createEdition: (data: Partial<EditionWithMedia> & { media_ids?: string[] }) =>
+    request<EditionWithMedia>('/admin/editions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateEdition: (id: string, data: Partial<EditionWithMedia> & { media_ids?: string[] }) =>
+    request<EditionWithMedia>(`/admin/editions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteEdition: (id: string) =>
+    request<{ success: boolean }>(`/admin/editions/${id}`, { method: 'DELETE' }),
+
+  toggleEditionPublish: (id: string) =>
+    request<EditionWithMedia>(`/admin/editions/${id}/publish`, { method: 'POST' }),
 
   // Events
   listEvents: (search?: string, page = 1, perPage = 20) => {

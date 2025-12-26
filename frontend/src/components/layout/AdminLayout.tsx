@@ -12,6 +12,7 @@ import {
   X,
   Palette,
   FileImage,
+  BookCopy,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ const sidebarLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/admin/artistes', icon: Users, label: 'Artistes' },
   { to: '/admin/oeuvres', icon: Palette, label: 'Oeuvres' },
+  { to: '/admin/editions', icon: BookCopy, label: 'Editions' },
   { to: '/admin/evenements', icon: Calendar, label: 'Evenements' },
   { to: '/admin/actualites', icon: FileText, label: 'Actualites' },
   { to: '/admin/medias', icon: FileImage, label: 'Medias' },

@@ -1,6 +1,7 @@
 mod artist;
 mod artwork;
 mod contact;
+mod edition;
 mod event;
 mod media;
 mod page;
@@ -11,6 +12,7 @@ mod waitlist;
 pub use artist::*;
 pub use artwork::*;
 pub use contact::*;
+pub use edition::*;
 pub use event::*;
 pub use media::*;
 pub use page::*;

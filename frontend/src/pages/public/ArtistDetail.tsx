@@ -98,49 +98,100 @@ export function ArtistDetail() {
               )}
             </div>
 
-            {/* Artworks */}
-            <div className="md:col-span-2">
-              <h2 className="font-serif text-2xl font-bold mb-6">Oeuvres</h2>
-              {artist.artworks.length === 0 ? (
-                <p className="text-muted-foreground">Aucune oeuvre disponible.</p>
-              ) : (
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {artist.artworks.map((artwork) => (
-                    <Card key={artwork.id} className="overflow-hidden">
-                      {artwork.media[0] && (
-                        <div className="aspect-[4/3]">
-                          <img
-                            src={artwork.media[0].url}
-                            alt={artwork.media[0].alt || artwork.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-1">{artwork.title}</h3>
-                        {artwork.year && (
-                          <p className="text-sm text-muted-foreground">{artwork.year}</p>
+            {/* Artworks & Editions */}
+            <div className="md:col-span-2 space-y-12">
+              {/* Artworks */}
+              <div>
+                <h2 className="font-serif text-2xl font-bold mb-6">Oeuvres</h2>
+                {artist.artworks.length === 0 ? (
+                  <p className="text-muted-foreground">Aucune oeuvre disponible.</p>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {artist.artworks.map((artwork) => (
+                      <Card key={artwork.id} className="overflow-hidden">
+                        {artwork.media[0] && (
+                          <div className="aspect-[4/3]">
+                            <img
+                              src={artwork.media[0].url}
+                              alt={artwork.media[0].alt || artwork.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                         )}
-                        {artwork.medium && (
-                          <p className="text-sm text-muted-foreground">{artwork.medium}</p>
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold mb-1">{artwork.title}</h3>
+                          {artwork.year && (
+                            <p className="text-sm text-muted-foreground">{artwork.year}</p>
+                          )}
+                          {artwork.medium && (
+                            <p className="text-sm text-muted-foreground">{artwork.medium}</p>
+                          )}
+                          {artwork.dimensions && (
+                            <p className="text-sm text-muted-foreground">{artwork.dimensions}</p>
+                          )}
+                          {artwork.artsper_url && (
+                            <>
+                              <Separator className="my-3" />
+                              <Button variant="outline" size="sm" asChild className="w-full">
+                                <a href={artwork.artsper_url} target="_blank" rel="noopener noreferrer">
+                                  Voir sur Artsper
+                                  <ExternalLink className="ml-2 h-3 w-3" />
+                                </a>
+                              </Button>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Editions */}
+              {artist.editions && artist.editions.length > 0 && (
+                <div>
+                  <h2 className="font-serif text-2xl font-bold mb-6">Editions</h2>
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {artist.editions.map((edition) => (
+                      <Card key={edition.id} className="overflow-hidden">
+                        {edition.media?.[0] && (
+                          <div className="aspect-[4/3]">
+                            <img
+                              src={edition.media[0].url}
+                              alt={edition.media[0].alt || edition.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                         )}
-                        {artwork.dimensions && (
-                          <p className="text-sm text-muted-foreground">{artwork.dimensions}</p>
-                        )}
-                        {artwork.artsper_url && (
-                          <>
-                            <Separator className="my-3" />
-                            <Button variant="outline" size="sm" asChild className="w-full">
-                              <a href={artwork.artsper_url} target="_blank" rel="noopener noreferrer">
-                                Voir sur Artsper
-                                <ExternalLink className="ml-2 h-3 w-3" />
-                              </a>
-                            </Button>
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold mb-1">{edition.title}</h3>
+                          {edition.year && (
+                            <p className="text-sm text-muted-foreground">{edition.year}</p>
+                          )}
+                          {edition.medium && (
+                            <p className="text-sm text-muted-foreground">{edition.medium}</p>
+                          )}
+                          {edition.dimensions && (
+                            <p className="text-sm text-muted-foreground">{edition.dimensions}</p>
+                          )}
+                          {edition.edition_size && (
+                            <p className="text-sm font-medium">{edition.edition_size}</p>
+                          )}
+                          {edition.artsper_url && (
+                            <>
+                              <Separator className="my-3" />
+                              <Button variant="outline" size="sm" asChild className="w-full">
+                                <a href={edition.artsper_url} target="_blank" rel="noopener noreferrer">
+                                  Voir sur Artsper
+                                  <ExternalLink className="ml-2 h-3 w-3" />
+                                </a>
+                              </Button>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

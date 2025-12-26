@@ -168,6 +168,7 @@ pub struct ArtistDetailResponse {
     #[serde(flatten)]
     pub artist: ArtistWithPortrait,
     pub artworks: Vec<ArtworkWithMedia>,
+    pub editions: Vec<EditionWithMedia>,
 }
 
 pub async fn get_artist(
@@ -224,10 +225,98 @@ pub async fn get_artist(
         });
     }
 
+    // Fetch editions
+    let editions = sqlx::query_as::<_, Edition>(
+        r#"
+        SELECT * FROM editions
+        WHERE artist_id = $1 AND published = true
+        ORDER BY year DESC NULLS LAST, title ASC
+        "#,
+    )
+    .bind(artist.id)
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut editions_with_media = Vec::new();
+    for edition in editions {
+        let media = sqlx::query_as::<_, Media>(
+            r#"
+            SELECT m.* FROM media m
+            JOIN edition_media em ON m.id = em.media_id
+            WHERE em.edition_id = $1
+            ORDER BY em.sort_order ASC
+            "#,
+        )
+        .bind(edition.id)
+        .fetch_all(&state.db)
+        .await?;
+
+        editions_with_media.push(EditionWithMedia {
+            edition,
+            media,
+            artist_name: Some(artist.name.clone()),
+            artist_slug: Some(artist.slug.clone()),
+        });
+    }
+
     Ok(Json(ArtistDetailResponse {
         artist: ArtistWithPortrait { artist, portrait },
         artworks: artworks_with_media,
+        editions: editions_with_media,
     }))
+}
+
+// Editions
+pub async fn list_editions(
+    State(state): State<AppState>,
+    Query(query): Query<PaginationQuery>,
+) -> AppResult<Json<Vec<EditionWithMedia>>> {
+    let page = query.page.unwrap_or(1).max(1);
+    let per_page = query.per_page.unwrap_or(100).min(200);
+    let offset = (page - 1) * per_page;
+
+    let editions = sqlx::query_as::<_, Edition>(
+        r#"
+        SELECT e.* FROM editions e
+        JOIN artists a ON e.artist_id = a.id
+        WHERE e.published = true AND a.published = true
+        ORDER BY a.name ASC, e.year DESC NULLS LAST, e.title ASC
+        LIMIT $1 OFFSET $2
+        "#,
+    )
+    .bind(per_page as i64)
+    .bind(offset as i64)
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut result = Vec::new();
+    for edition in editions {
+        let media = sqlx::query_as::<_, Media>(
+            r#"
+            SELECT m.* FROM media m
+            JOIN edition_media em ON m.id = em.media_id
+            WHERE em.edition_id = $1
+            ORDER BY em.sort_order ASC
+            "#,
+        )
+        .bind(edition.id)
+        .fetch_all(&state.db)
+        .await?;
+
+        let artist = sqlx::query_as::<_, Artist>("SELECT * FROM artists WHERE id = $1")
+            .bind(edition.artist_id)
+            .fetch_optional(&state.db)
+            .await?;
+
+        result.push(EditionWithMedia {
+            edition,
+            media,
+            artist_name: artist.as_ref().map(|a| a.name.clone()),
+            artist_slug: artist.map(|a| a.slug),
+        });
+    }
+
+    Ok(Json(result))
 }
 
 // Events

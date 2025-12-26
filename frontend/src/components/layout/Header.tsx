@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const navLinks = [
   { to: '/galerie', label: 'Galerie' },
   { to: '/artistes', label: 'Artistes' },
+  { to: '/editions', label: 'Editions' },
   { to: '/evenements', label: 'Evenements' },
   { to: '/actualites', label: 'Actualites' },
   { to: '/contact', label: 'Contact' },

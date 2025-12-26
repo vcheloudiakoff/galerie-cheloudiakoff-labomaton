@@ -8,25 +8,25 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MultiMediaPicker } from '@/components/admin/MediaPicker'
-import type { ArtworkWithMedia, ArtistWithPortrait, Media } from '@/types'
+import type { EditionWithMedia, ArtistWithPortrait, Media } from '@/types'
 
-export function AdminArtworks() {
-  const [artworks, setArtworks] = useState<ArtworkWithMedia[]>([])
+export function AdminEditions() {
+  const [editions, setEditions] = useState<EditionWithMedia[]>([])
   const [artists, setArtists] = useState<ArtistWithPortrait[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterArtistId, setFilterArtistId] = useState('')
-  const [editing, setEditing] = useState<ArtworkWithMedia | null>(null)
+  const [editing, setEditing] = useState<EditionWithMedia | null>(null)
   const [creating, setCreating] = useState(false)
 
-  const loadArtworks = () => {
+  const loadEditions = () => {
     setLoading(true)
     Promise.all([
-      adminApi.listArtworks(search || undefined),
+      adminApi.listEditions(search || undefined),
       adminApi.listArtists(undefined, 1, 100),
     ])
-      .then(([artworksData, artistsData]) => {
-        setArtworks(artworksData)
+      .then(([editionsData, artistsData]) => {
+        setEditions(editionsData)
         setArtists(artistsData)
       })
       .catch(console.error)
@@ -34,28 +34,28 @@ export function AdminArtworks() {
   }
 
   useEffect(() => {
-    const timer = setTimeout(loadArtworks, 300)
+    const timer = setTimeout(loadEditions, 300)
     return () => clearTimeout(timer)
   }, [search])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cette oeuvre ?')) return
+    if (!confirm('Supprimer cette edition ?')) return
     try {
-      await adminApi.deleteArtwork(id)
-      setArtworks(artworks.filter(a => a.id !== id))
+      await adminApi.deleteEdition(id)
+      setEditions(editions.filter(e => e.id !== id))
     } catch (error) {
       console.error(error)
     }
   }
 
-  const handleSave = async (data: Partial<ArtworkWithMedia> & { media_ids?: string[] }) => {
+  const handleSave = async (data: Partial<EditionWithMedia> & { media_ids?: string[] }) => {
     try {
       if (editing) {
-        const updated = await adminApi.updateArtwork(editing.id, data)
-        setArtworks(artworks.map(a => a.id === updated.id ? updated : a))
+        const updated = await adminApi.updateEdition(editing.id, data)
+        setEditions(editions.map(e => e.id === updated.id ? updated : e))
       } else {
-        const created = await adminApi.createArtwork(data)
-        setArtworks([created, ...artworks])
+        const created = await adminApi.createEdition(data)
+        setEditions([created, ...editions])
       }
       setEditing(null)
       setCreating(false)
@@ -64,15 +64,24 @@ export function AdminArtworks() {
     }
   }
 
+  const handleTogglePublish = async (edition: EditionWithMedia) => {
+    try {
+      const updated = await adminApi.toggleEditionPublish(edition.id)
+      setEditions(editions.map(e => e.id === updated.id ? { ...e, published: updated.published, published_at: updated.published_at } : e))
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   return (
     <>
       <Helmet>
-        <title>Oeuvres - Admin</title>
+        <title>Editions - Admin</title>
       </Helmet>
 
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Oeuvres</h1>
+          <h1 className="text-2xl font-bold">Editions</h1>
           <Button onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nouvelle
@@ -102,8 +111,8 @@ export function AdminArtworks() {
         </div>
 
         {(creating || editing) && (
-          <ArtworkForm
-            artwork={editing}
+          <EditionForm
+            edition={editing}
             artists={artists}
             onSave={handleSave}
             onCancel={() => { setEditing(null); setCreating(false) }}
@@ -114,26 +123,26 @@ export function AdminArtworks() {
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : artworks.length === 0 ? (
-          <p className="text-muted-foreground text-center py-12">Aucune oeuvre</p>
+        ) : editions.length === 0 ? (
+          <p className="text-muted-foreground text-center py-12">Aucune edition</p>
         ) : (
           <div className="space-y-2">
-            {artworks
-              .filter((a) => !filterArtistId || a.artist_id === filterArtistId)
-              .map((artwork) => (
+            {editions
+              .filter((e) => !filterArtistId || e.artist_id === filterArtistId)
+              .map((edition) => (
               <div
-                key={artwork.id}
+                key={edition.id}
                 className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div
                   className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
-                  onClick={() => window.open(`/artistes/${artwork.artist_slug}`, '_blank')}
+                  onClick={() => window.open(`/artistes/${edition.artist_slug}`, '_blank')}
                 >
                   <div className="w-16 h-16 rounded overflow-hidden bg-muted flex-shrink-0">
-                    {artwork.media?.[0] ? (
+                    {edition.media?.[0] ? (
                       <img
-                        src={artwork.media[0].url}
-                        alt={artwork.title}
+                        src={edition.media[0].url}
+                        alt={edition.title}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -143,29 +152,36 @@ export function AdminArtworks() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">{artwork.title}</h3>
+                    <h3 className="font-semibold truncate">{edition.title}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {artwork.artist_name} {artwork.year && `(${artwork.year})`}
+                      {edition.artist_name} {edition.year && `(${edition.year})`}
+                      {edition.edition_size && ` - ${edition.edition_size}`}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {artwork.published ? (
-                    <Eye className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setEditing(artwork)}
+                    onClick={() => handleTogglePublish(edition)}
+                  >
+                    {edition.published ? (
+                      <Eye className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditing(edition)}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(artwork.id)}
+                    onClick={() => handleDelete(edition.id)}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -179,27 +195,28 @@ export function AdminArtworks() {
   )
 }
 
-function ArtworkForm({
-  artwork,
+function EditionForm({
+  edition,
   artists,
   onSave,
   onCancel,
 }: {
-  artwork: ArtworkWithMedia | null
+  edition: EditionWithMedia | null
   artists: ArtistWithPortrait[]
-  onSave: (data: Partial<ArtworkWithMedia> & { media_ids?: string[] }) => void
+  onSave: (data: Partial<EditionWithMedia> & { media_ids?: string[] }) => void
   onCancel: () => void
 }) {
-  const [artistId, setArtistId] = useState(artwork?.artist_id || '')
-  const [title, setTitle] = useState(artwork?.title || '')
-  const [year, setYear] = useState(artwork?.year?.toString() || '')
-  const [medium, setMedium] = useState(artwork?.medium || '')
-  const [dimensions, setDimensions] = useState(artwork?.dimensions || '')
-  const [priceNote, setPriceNote] = useState(artwork?.price_note || '')
-  const [artsperUrl, setArtsperUrl] = useState(artwork?.artsper_url || '')
-  const [published, setPublished] = useState(artwork?.published || false)
-  const [mediaIds, setMediaIds] = useState<string[]>(artwork?.media?.map((m) => m.id) || [])
-  const [mediaPreviews, setMediaPreviews] = useState<Media[]>(artwork?.media || [])
+  const [artistId, setArtistId] = useState(edition?.artist_id || '')
+  const [title, setTitle] = useState(edition?.title || '')
+  const [year, setYear] = useState(edition?.year?.toString() || '')
+  const [medium, setMedium] = useState(edition?.medium || '')
+  const [dimensions, setDimensions] = useState(edition?.dimensions || '')
+  const [editionSize, setEditionSize] = useState(edition?.edition_size || '')
+  const [priceNote, setPriceNote] = useState(edition?.price_note || '')
+  const [artsperUrl, setArtsperUrl] = useState(edition?.artsper_url || '')
+  const [published, setPublished] = useState(edition?.published || false)
+  const [mediaIds, setMediaIds] = useState<string[]>(edition?.media?.map((m) => m.id) || [])
+  const [mediaPreviews, setMediaPreviews] = useState<Media[]>(edition?.media || [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,6 +226,7 @@ function ArtworkForm({
       year: year ? parseInt(year) : undefined,
       medium: medium || undefined,
       dimensions: dimensions || undefined,
+      edition_size: editionSize || undefined,
       price_note: priceNote || undefined,
       artsper_url: artsperUrl || undefined,
       published,
@@ -224,14 +242,14 @@ function ArtworkForm({
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>{artwork ? 'Modifier' : 'Nouvelle oeuvre'}</CardTitle>
+        <CardTitle>{edition ? 'Modifier' : 'Nouvelle edition'}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <MultiMediaPicker
             value={mediaIds}
             onChange={handleMediaChange}
-            label="Images de l'oeuvre"
+            label="Images de l'edition"
             previews={mediaPreviews}
           />
 
@@ -275,7 +293,7 @@ function ArtworkForm({
               <Input
                 value={medium}
                 onChange={(e) => setMedium(e.target.value)}
-                placeholder="Huile sur toile"
+                placeholder="Lithographie"
               />
             </div>
             <div className="space-y-2">
@@ -283,9 +301,20 @@ function ArtworkForm({
               <Input
                 value={dimensions}
                 onChange={(e) => setDimensions(e.target.value)}
-                placeholder="100 x 80 cm"
+                placeholder="50 x 40 cm"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Tirage</Label>
+              <Input
+                value={editionSize}
+                onChange={(e) => setEditionSize(e.target.value)}
+                placeholder="30 ex."
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Note prix</Label>
               <Input
@@ -294,16 +323,15 @@ function ArtworkForm({
                 placeholder="Sur demande"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>URL Artsper</Label>
-            <Input
-              type="url"
-              value={artsperUrl}
-              onChange={(e) => setArtsperUrl(e.target.value)}
-              placeholder="https://artsper.com/..."
-            />
+            <div className="space-y-2">
+              <Label>URL Artsper</Label>
+              <Input
+                type="url"
+                value={artsperUrl}
+                onChange={(e) => setArtsperUrl(e.target.value)}
+                placeholder="https://artsper.com/..."
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

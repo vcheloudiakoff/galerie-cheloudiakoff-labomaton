@@ -9,6 +9,7 @@ import { Home } from '@/pages/public/Home'
 import { Gallery } from '@/pages/public/Gallery'
 import { Artists } from '@/pages/public/Artists'
 import { ArtistDetail } from '@/pages/public/ArtistDetail'
+import { Editions } from '@/pages/public/Editions'
 import { Events } from '@/pages/public/Events'
 import { EventDetail } from '@/pages/public/EventDetail'
 import { News } from '@/pages/public/News'
@@ -21,6 +22,7 @@ import { Login } from '@/pages/admin/Login'
 import { Dashboard } from '@/pages/admin/Dashboard'
 import { AdminArtists } from '@/pages/admin/Artists'
 import { AdminArtworks } from '@/pages/admin/Artworks'
+import { AdminEditions } from '@/pages/admin/Editions'
 import { AdminEvents } from '@/pages/admin/Events'
 import { AdminPosts } from '@/pages/admin/Posts'
 import { AdminMedia } from '@/pages/admin/Media'
@@ -37,6 +39,7 @@ function App() {
         <Route path="/galerie" element={<Gallery />} />
         <Route path="/artistes" element={<Artists />} />
         <Route path="/artistes/:slug" element={<ArtistDetail />} />
+        <Route path="/editions" element={<Editions />} />
         <Route path="/evenements" element={<Events />} />
         <Route path="/evenements/:slug" element={<EventDetail />} />
         <Route path="/actualites" element={<News />} />
@@ -51,6 +54,7 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="artistes" element={<AdminArtists />} />
         <Route path="oeuvres" element={<AdminArtworks />} />
+        <Route path="editions" element={<AdminEditions />} />
         <Route path="evenements" element={<AdminEvents />} />
         <Route path="actualites" element={<AdminPosts />} />
         <Route path="medias" element={<AdminMedia />} />

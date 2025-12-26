@@ -1256,3 +1256,287 @@ pub async fn export_waitlist(State(state): State<AppState>) -> impl IntoResponse
         csv_data,
     )
 }
+
+// ============ EDITIONS ============
+
+pub async fn list_editions(
+    State(state): State<AppState>,
+    Query(query): Query<SearchQuery>,
+) -> AppResult<Json<Vec<EditionWithMedia>>> {
+    let page = query.page.unwrap_or(1).max(1);
+    let per_page = query.per_page.unwrap_or(20).min(100);
+    let offset = (page - 1) * per_page;
+
+    let editions = if let Some(search) = &query.q {
+        let search_pattern = format!("%{}%", search);
+        sqlx::query_as::<_, Edition>(
+            r#"
+            SELECT ed.* FROM editions ed
+            LEFT JOIN artists ar ON ed.artist_id = ar.id
+            WHERE ed.title ILIKE $1
+                OR ed.medium ILIKE $1
+                OR ed.dimensions ILIKE $1
+                OR ed.edition_size ILIKE $1
+                OR ar.name ILIKE $1
+            ORDER BY ed.updated_at DESC
+            LIMIT $2 OFFSET $3
+            "#,
+        )
+        .bind(&search_pattern)
+        .bind(per_page as i64)
+        .bind(offset as i64)
+        .fetch_all(&state.db)
+        .await?
+    } else {
+        sqlx::query_as::<_, Edition>(
+            r#"
+            SELECT * FROM editions
+            ORDER BY updated_at DESC
+            LIMIT $1 OFFSET $2
+            "#,
+        )
+        .bind(per_page as i64)
+        .bind(offset as i64)
+        .fetch_all(&state.db)
+        .await?
+    };
+
+    let mut result = Vec::new();
+    for edition in editions {
+        let media = sqlx::query_as::<_, Media>(
+            r#"
+            SELECT m.* FROM media m
+            JOIN edition_media em ON m.id = em.media_id
+            WHERE em.edition_id = $1
+            ORDER BY em.sort_order ASC
+            "#,
+        )
+        .bind(edition.id)
+        .fetch_all(&state.db)
+        .await?;
+
+        let artist = sqlx::query_as::<_, Artist>("SELECT * FROM artists WHERE id = $1")
+            .bind(edition.artist_id)
+            .fetch_optional(&state.db)
+            .await?;
+
+        result.push(EditionWithMedia {
+            edition,
+            media,
+            artist_name: artist.as_ref().map(|a| a.name.clone()),
+            artist_slug: artist.map(|a| a.slug),
+        });
+    }
+
+    Ok(Json(result))
+}
+
+pub async fn get_edition(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<EditionWithMedia>> {
+    let edition = sqlx::query_as::<_, Edition>("SELECT * FROM editions WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Edition not found".to_string()))?;
+
+    let media = sqlx::query_as::<_, Media>(
+        r#"
+        SELECT m.* FROM media m
+        JOIN edition_media em ON m.id = em.media_id
+        WHERE em.edition_id = $1
+        ORDER BY em.sort_order ASC
+        "#,
+    )
+    .bind(edition.id)
+    .fetch_all(&state.db)
+    .await?;
+
+    let artist = sqlx::query_as::<_, Artist>("SELECT * FROM artists WHERE id = $1")
+        .bind(edition.artist_id)
+        .fetch_optional(&state.db)
+        .await?;
+
+    Ok(Json(EditionWithMedia {
+        edition,
+        media,
+        artist_name: artist.as_ref().map(|a| a.name.clone()),
+        artist_slug: artist.map(|a| a.slug),
+    }))
+}
+
+pub async fn create_edition(
+    State(state): State<AppState>,
+    Json(payload): Json<CreateEditionRequest>,
+) -> AppResult<Json<Edition>> {
+    let slug = slug::slugify(&payload.title);
+    let now = Utc::now();
+    let published_at = if payload.published.unwrap_or(false) {
+        Some(now)
+    } else {
+        None
+    };
+
+    let edition = sqlx::query_as::<_, Edition>(
+        r#"
+        INSERT INTO editions (artist_id, title, slug, year, medium, dimensions, edition_size, price_note, artsper_url, published, published_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+        "#,
+    )
+    .bind(&payload.artist_id)
+    .bind(&payload.title)
+    .bind(&slug)
+    .bind(&payload.year)
+    .bind(&payload.medium)
+    .bind(&payload.dimensions)
+    .bind(&payload.edition_size)
+    .bind(&payload.price_note)
+    .bind(&payload.artsper_url)
+    .bind(payload.published.unwrap_or(false))
+    .bind(published_at)
+    .fetch_one(&state.db)
+    .await?;
+
+    // Add media associations
+    if let Some(media_ids) = payload.media_ids {
+        for (order, media_id) in media_ids.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO edition_media (edition_id, media_id, sort_order) VALUES ($1, $2, $3)",
+            )
+            .bind(edition.id)
+            .bind(media_id)
+            .bind(order as i32)
+            .execute(&state.db)
+            .await?;
+        }
+    }
+
+    Ok(Json(edition))
+}
+
+pub async fn update_edition(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateEditionRequest>,
+) -> AppResult<Json<Edition>> {
+    let now = Utc::now();
+
+    let current = sqlx::query_as::<_, Edition>("SELECT * FROM editions WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Edition not found".to_string()))?;
+
+    let new_slug = payload.title.as_ref().map(|t| slug::slugify(t));
+
+    let published_at = match (current.published, payload.published) {
+        (false, Some(true)) => Some(now),
+        (_, Some(false)) => None,
+        _ => current.published_at,
+    };
+
+    let edition = sqlx::query_as::<_, Edition>(
+        r#"
+        UPDATE editions
+        SET artist_id = COALESCE($2, artist_id),
+            title = COALESCE($3, title),
+            slug = COALESCE($4, slug),
+            year = COALESCE($5, year),
+            medium = COALESCE($6, medium),
+            dimensions = COALESCE($7, dimensions),
+            edition_size = COALESCE($8, edition_size),
+            price_note = COALESCE($9, price_note),
+            artsper_url = COALESCE($10, artsper_url),
+            published = COALESCE($11, published),
+            published_at = $12,
+            updated_at = $13
+        WHERE id = $1
+        RETURNING *
+        "#,
+    )
+    .bind(id)
+    .bind(&payload.artist_id)
+    .bind(&payload.title)
+    .bind(&new_slug)
+    .bind(&payload.year)
+    .bind(&payload.medium)
+    .bind(&payload.dimensions)
+    .bind(&payload.edition_size)
+    .bind(&payload.price_note)
+    .bind(&payload.artsper_url)
+    .bind(payload.published)
+    .bind(published_at)
+    .bind(now)
+    .fetch_one(&state.db)
+    .await?;
+
+    // Update media associations if provided
+    if let Some(media_ids) = payload.media_ids {
+        sqlx::query("DELETE FROM edition_media WHERE edition_id = $1")
+            .bind(id)
+            .execute(&state.db)
+            .await?;
+
+        for (order, media_id) in media_ids.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO edition_media (edition_id, media_id, sort_order) VALUES ($1, $2, $3)",
+            )
+            .bind(id)
+            .bind(media_id)
+            .bind(order as i32)
+            .execute(&state.db)
+            .await?;
+        }
+    }
+
+    Ok(Json(edition))
+}
+
+pub async fn delete_edition(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<serde_json::Value>> {
+    sqlx::query("DELETE FROM editions WHERE id = $1")
+        .bind(id)
+        .execute(&state.db)
+        .await?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
+pub async fn toggle_edition_publish(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<Edition>> {
+    let current = sqlx::query_as::<_, Edition>("SELECT * FROM editions WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Edition not found".to_string()))?;
+
+    let now = Utc::now();
+    let (new_published, published_at) = if current.published {
+        (false, None)
+    } else {
+        (true, Some(now))
+    };
+
+    let edition = sqlx::query_as::<_, Edition>(
+        r#"
+        UPDATE editions
+        SET published = $2, published_at = $3, updated_at = $4
+        WHERE id = $1
+        RETURNING *
+        "#,
+    )
+    .bind(id)
+    .bind(new_published)
+    .bind(published_at)
+    .bind(now)
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(edition))
+}
