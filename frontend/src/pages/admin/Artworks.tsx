@@ -233,6 +233,8 @@ function ArtworkForm({
             onChange={handleMediaChange}
             label="Images de l'oeuvre"
             previews={mediaPreviews}
+            artistId={artistId}
+            artists={artists.map(a => ({ id: a.id, name: a.name }))}
           />
 
           <div className="grid md:grid-cols-2 gap-4">

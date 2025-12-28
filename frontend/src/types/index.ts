@@ -10,6 +10,9 @@ export interface Media {
   url: string
   alt: string | null
   credit: string | null
+  folder: string | null
+  artist_id: string | null
+  artist_name?: string | null
   width: number | null
   height: number | null
   created_at: string

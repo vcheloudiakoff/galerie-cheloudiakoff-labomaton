@@ -115,21 +115,30 @@ export const publicApi = {
 // Admin API
 export const adminApi = {
   // Media
-  listMedia: (page = 1, perPage = 50) =>
-    request<Media[]>(`/admin/media?page=${page}&per_page=${perPage}`),
+  listMedia: (page = 1, perPage = 50, folder?: string, artistId?: string) => {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) })
+    if (folder) params.set('folder', folder)
+    if (artistId) params.set('artist_id', artistId)
+    return request<Media[]>(`/admin/media?${params}`)
+  },
 
-  uploadMedia: (file: File, alt?: string, credit?: string) => {
+  listMediaFolders: () =>
+    request<string[]>('/admin/media/folders'),
+
+  uploadMedia: (file: File, alt?: string, credit?: string, folder?: string, artistId?: string) => {
     const formData = new FormData()
     formData.append('file', file)
     if (alt) formData.append('alt', alt)
     if (credit) formData.append('credit', credit)
+    if (folder) formData.append('folder', folder)
+    if (artistId) formData.append('artist_id', artistId)
     return request<Media>('/admin/media', {
       method: 'POST',
       body: formData,
     })
   },
 
-  updateMedia: (id: string, data: { alt?: string; credit?: string }) =>
+  updateMedia: (id: string, data: { alt?: string; credit?: string; folder?: string; artist_id?: string }) =>
     request<Media>(`/admin/media/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

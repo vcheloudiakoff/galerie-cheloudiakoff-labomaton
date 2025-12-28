@@ -41,6 +41,7 @@ fn admin_routes() -> Router<AppState> {
     Router::new()
         // Media
         .route("/media", get(handlers::admin::list_media))
+        .route("/media/folders", get(handlers::admin::list_media_folders))
         .route("/media", post(handlers::admin::upload_media))
         .route("/media/:id", put(handlers::admin::update_media))
         .route("/media/:id", delete(handlers::admin::delete_media))

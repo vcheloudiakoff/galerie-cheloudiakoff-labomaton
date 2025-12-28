@@ -16,29 +16,111 @@ use crate::{
     AppState,
 };
 
+#[derive(Debug, Deserialize)]
+pub struct MediaListQuery {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+    pub folder: Option<String>,
+    pub artist_id: Option<Uuid>,
+}
+
 // ============ MEDIA ============
 
 pub async fn list_media(
     State(state): State<AppState>,
-    Query(query): Query<PaginationQuery>,
-) -> AppResult<Json<Vec<Media>>> {
+    Query(query): Query<MediaListQuery>,
+) -> AppResult<Json<Vec<MediaWithArtist>>> {
     let page = query.page.unwrap_or(1).max(1);
-    let per_page = query.per_page.unwrap_or(50).min(100);
+    let per_page = query.per_page.unwrap_or(50).min(500);
     let offset = (page - 1) * per_page;
 
-    let media = sqlx::query_as::<_, Media>(
+    let media = match (&query.folder, &query.artist_id) {
+        (Some(folder), Some(artist_id)) => {
+            sqlx::query_as::<_, MediaWithArtist>(
+                r#"
+                SELECT m.*, a.name as artist_name
+                FROM media m
+                LEFT JOIN artists a ON m.artist_id = a.id
+                WHERE m.folder = $3 AND m.artist_id = $4
+                ORDER BY m.created_at DESC
+                LIMIT $1 OFFSET $2
+                "#,
+            )
+            .bind(per_page as i64)
+            .bind(offset as i64)
+            .bind(folder)
+            .bind(artist_id)
+            .fetch_all(&state.db)
+            .await?
+        }
+        (Some(folder), None) => {
+            sqlx::query_as::<_, MediaWithArtist>(
+                r#"
+                SELECT m.*, a.name as artist_name
+                FROM media m
+                LEFT JOIN artists a ON m.artist_id = a.id
+                WHERE m.folder = $3
+                ORDER BY m.created_at DESC
+                LIMIT $1 OFFSET $2
+                "#,
+            )
+            .bind(per_page as i64)
+            .bind(offset as i64)
+            .bind(folder)
+            .fetch_all(&state.db)
+            .await?
+        }
+        (None, Some(artist_id)) => {
+            sqlx::query_as::<_, MediaWithArtist>(
+                r#"
+                SELECT m.*, a.name as artist_name
+                FROM media m
+                LEFT JOIN artists a ON m.artist_id = a.id
+                WHERE m.artist_id = $3
+                ORDER BY m.created_at DESC
+                LIMIT $1 OFFSET $2
+                "#,
+            )
+            .bind(per_page as i64)
+            .bind(offset as i64)
+            .bind(artist_id)
+            .fetch_all(&state.db)
+            .await?
+        }
+        (None, None) => {
+            sqlx::query_as::<_, MediaWithArtist>(
+                r#"
+                SELECT m.*, a.name as artist_name
+                FROM media m
+                LEFT JOIN artists a ON m.artist_id = a.id
+                ORDER BY m.created_at DESC
+                LIMIT $1 OFFSET $2
+                "#,
+            )
+            .bind(per_page as i64)
+            .bind(offset as i64)
+            .fetch_all(&state.db)
+            .await?
+        }
+    };
+
+    Ok(Json(media))
+}
+
+pub async fn list_media_folders(
+    State(state): State<AppState>,
+) -> AppResult<Json<Vec<String>>> {
+    let folders: Vec<(Option<String>,)> = sqlx::query_as(
         r#"
-        SELECT * FROM media
-        ORDER BY created_at DESC
-        LIMIT $1 OFFSET $2
+        SELECT DISTINCT folder FROM media
+        WHERE folder IS NOT NULL AND folder != ''
+        ORDER BY folder
         "#,
     )
-    .bind(per_page as i64)
-    .bind(offset as i64)
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(media))
+    Ok(Json(folders.into_iter().filter_map(|(f,)| f).collect()))
 }
 
 pub async fn upload_media(
@@ -48,6 +130,8 @@ pub async fn upload_media(
     let mut file_data: Option<(String, Vec<u8>, String)> = None;
     let mut alt: Option<String> = None;
     let mut credit: Option<String> = None;
+    let mut folder: Option<String> = None;
+    let mut artist_id: Option<Uuid> = None;
 
     while let Some(field) = multipart
         .next_field()
@@ -89,6 +173,26 @@ pub async fn upload_media(
                         .map_err(|e| AppError::BadRequest(e.to_string()))?,
                 );
             }
+            "folder" => {
+                folder = Some(
+                    field
+                        .text()
+                        .await
+                        .map_err(|e| AppError::BadRequest(e.to_string()))?,
+                );
+            }
+            "artist_id" => {
+                let text = field
+                    .text()
+                    .await
+                    .map_err(|e| AppError::BadRequest(e.to_string()))?;
+                if !text.is_empty() {
+                    artist_id = Some(
+                        Uuid::parse_str(&text)
+                            .map_err(|e| AppError::BadRequest(format!("Invalid artist_id: {}", e)))?,
+                    );
+                }
+            }
             _ => {}
         }
     }
@@ -118,8 +222,8 @@ pub async fn upload_media(
 
     let media = sqlx::query_as::<_, Media>(
         r#"
-        INSERT INTO media (filename, url, alt, credit)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO media (filename, url, alt, credit, folder, artist_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
         "#,
     )
@@ -127,6 +231,8 @@ pub async fn upload_media(
     .bind(&url)
     .bind(&alt)
     .bind(&credit)
+    .bind(&folder)
+    .bind(&artist_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -142,7 +248,9 @@ pub async fn update_media(
         r#"
         UPDATE media
         SET alt = COALESCE($2, alt),
-            credit = COALESCE($3, credit)
+            credit = COALESCE($3, credit),
+            folder = COALESCE($4, folder),
+            artist_id = COALESCE($5, artist_id)
         WHERE id = $1
         RETURNING *
         "#,
@@ -150,6 +258,8 @@ pub async fn update_media(
     .bind(id)
     .bind(&payload.alt)
     .bind(&payload.credit)
+    .bind(&payload.folder)
+    .bind(&payload.artist_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound("Media not found".to_string()))?;
